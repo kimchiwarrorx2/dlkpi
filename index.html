@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>콘텐츠플래닝팀 KPI</title>
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/lucide-react"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+        :root {
+            --primary: #6366F1;
+            --lv1-1: #6366F1;
+            --lv1-2: #0EA5E9;
+            --lv1-3: #10B981;
+            --lv1-4: #F59E0B;
+            --lv1-5: #8B5CF6;
+            --lv1-6: #EF4444;
+            --lv1-7: #64748B;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .lv1-container {
+            border-left: 6px solid var(--primary);
+            margin-bottom: 3rem;
+        }
+
+        .lv2-group {
+            background: linear-gradient(to right, #fff, #f8fafc);
+            border: 1px solid #e2e8f0;
+        }
+
+        .lv3-item {
+            position: relative;
+            background: white;
+            border: 1px solid #E2E8F0;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .lv3-code-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+            border-radius: 0.5rem;
+            font-weight: 900;
+            font-size: 1.75rem;
+            transform: translateY(10%);
+        }
+
+        .lv3-item:hover .lv3-code-overlay {
+            opacity: 0.98;
+            transform: translateY(0);
+        }
+
+        .project-chip {
+            background-color: #0F172A;
+            color: #F8FAFC;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid #1E293B;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.75rem;
+            font-weight: 800;
+            color: #64748B;
+            position: relative;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 15%;
+            right: 15%;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .btn-fancy {
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+            color: #fff;
+        }
+
+        .login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0F172A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const INITIAL_DATA = {
+            "tree": [
+                {
+                    "code": "1", "label": "수주 목표 달성", "full": "E&C 수주 목표 달성 기여",
+                    "children": [
+                        {
+                            "code": "1", "label": "MPR 실행 지원", "full": "아크로 수주 MPR 전방위 실행 지원",
+                            "children": [
+                                { "code": "1", "label": "브랜드 영상 기획·개발", "full": "브랜드 영상 기획 및 개발", "projects": ["아크로 하이엔드 무드 영상", "e편한세상 수주 영상"] },
+                                { "code": "2", "label": "브랜드 MPR 지원", "full": "브랜드 MPR 지원", "projects": ["브로슈어 개선"] },
+                                { "code": "3", "label": "라운지 공간 디자인 개발", "full": "아크로 라운지 공간 구현 및 디자인 개발", "projects": ["압구정 라운지", "성수동 라운지", "목동 홍보관"] },
+                                { "code": "4", "label": "핵심 수주 사업지 디자인 기획·개발", "full": "압구정, 목동, 성수 및 핵심 수주 사업지 대상 디자인 기획/개발", "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "2", "label": "영업이익 달성", "full": "E&C 영업이익 달성 기여",
+                    "children": [
+                        {
+                            "code": "1", "label": "관계사 브랜드 수수료", "full": "관계사 브랜드 수수료",
+                            "children": [
+                                { "code": "1", "label": "관계사 브랜드 사용 지원", "full": "관계사 e편한세상 브랜드 사용 지원", "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "3", "label": "브랜드 경쟁력 강화", "full": "ACRO, e편한세상 브랜드 경쟁력 강화",
+                    "children": [
+                        {
+                            "code": "1", "label": "입주·거주 고객 CRM 강화", "full": "입주-거주 단계 고객 CRM 프로그램 강화",
+                            "children": [
+                                { "code": "1", "label": "서비스 프로그램 기획", "full": "입주–거주 단계별 서비스 프로그램 기획", "isBusiness": true, "projects": [] },
+                                { "code": "2", "label": "서비스 디자인 기획·개발", "full": "입주–거주 단계별 서비스 디자인 기획 및 개발", "isBusiness": true, "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "2", "label": "유튜브 콘텐츠 강화", "full": "DL 유튜브 콘텐츠 강화",
+                            "children": [
+                                { "code": "1", "label": "운영·전략 수립 및 콘텐츠 기획·제작", "full": "운영·전략 수립 및 콘텐츠 기획·제작", "projects": [] },
+                                { "code": "2", "label": "디자인 템플릿 개발 및 QC", "full": "디자인 템플릿 개발 및 QC", "projects": [] },
+                                { "code": "3", "label": "채널 운영·성과 분석", "full": "채널 운영 및 성과 분석", "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "3", "label": "브랜디드 경험 디자인 개발", "full": "e편한세상 브랜디드 경험 디자인 개발",
+                            "children": [
+                                { "code": "1", "label": "분양 키비주얼 개발", "full": "분양 키비주얼 신규 개발", "isBusiness": true, "projects": [] },
+                                { "code": "2", "label": "사운드 디자인 개발·적용", "full": "사운드 디자인 개발 및 적용", "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "4", "label": "브랜드리더쉽 지표 1위 달성", "full": "브랜드리더쉽 지표 1위 달성",
+                            "children": [
+                                { "code": "1", "label": "브랜드 지표 1위 달성", "full": "아크로 브랜드 선호도 1위 & e편한세상 빅데이터 지수 1위", "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "5", "label": "브랜드·전사 콘텐츠 고도화", "full": "브랜드&전사 콘텐츠 고도화",
+                            "children": [
+                                { "code": "1", "label": "브랜드 메터리얼 업그레이드", "full": "브랜드 메터리얼 업그레이드", "projects": [] },
+                                { "code": "2", "label": "신규 기획(리서치·컨셉·네이밍)", "full": "리서치, 개발 컨셉, 네이밍 개발 등 신규 기획", "projects": [] },
+                                { "code": "3", "label": "전사 디자인 제작물 개발·QC", "full": "전사 대/내외 디자인 제작물 개발 및 QC 관리 강화", "projects": [] },
+                                { "code": "4", "label": "연간 MPR 캘린더 운영·지원", "full": "연간 MPR 캘린더 운영 지원 및 전사/계열사 홍보 콘텐츠 기획/개발 지원", "projects": [] },
+                                { "code": "5", "label": "수주·관리 사업지 디자인 개발", "full": "수주, 관리 사업지 제작물/플랫폼 디자인 신규 개발", "projects": [] },
+                                { "code": "6", "label": "경험 콘텐츠·디자인 개발", "full": "분양·입주·디셀렉션 경험 콘텐츠/디자인 신규 개발", "isBusiness": true, "projects": [] },
+                                { "code": "7", "label": "사이니지 실시설계 개발", "full": "사이니지 실시설계 신규 개발", "isBusiness": true, "projects": [] },
+                                { "code": "8", "label": "비주거 브랜드 디자인 표준도서 개정", "full": "비주거 브랜드 디자인 표준도서 개정", "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "6", "label": "브랜드 Risk Zero", "full": "브랜드 Risk Zero",
+                            "children": [
+                                { "code": "1", "label": "사업 Risk Free를 위한 사업 전/후 브랜드 운영/관리 강화", "full": "사업 Risk Free를 위한 사업 전/후 브랜드 운영/관리 강화", "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "4", "label": "매뉴얼작성(재개정) 및 운영", "full": "매뉴얼작성(재개정) 및 운영",
+                    "children": [
+                        {
+                            "code": "1", "label": "매뉴얼 작성·개정 및 운영", "full": "브랜드 및 업무 매뉴얼 수립/개정",
+                            "children": [
+                                { "code": "1", "label": "브랜드 Application 매뉴얼 개정·배포", "full": "브랜드 Application 매뉴얼 개정 및 배포", "isBusiness": true, "projects": [] },
+                                { "code": "2", "label": "사회공헌 Application 매뉴얼 신규 수립", "full": "사회공헌 Application 매뉴얼 신규 수립", "projects": [] },
+                                { "code": "3", "label": "서비스 운영·관리 체계 구축", "full": "서비스 운영·관리 체계 정립 및 매뉴얼 구축", "projects": [] },
+                                { "code": "4", "label": "업무 프로세스 개선 및 매뉴얼 수립", "full": "업무 프로세스 개선 및 매뉴얼 수립", "projects": [] },
+                                { "code": "5", "label": "생산성 향상 업무 프로세스 개선", "full": "생산성 향상 업무 프로세스 개선", "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "5", "label": "그룹사 동기화", "full": "그룹사 동기화",
+                    "children": [
+                        {
+                            "code": "1", "label": "업무 프로세스 미러링(관계사)", "full": "건설 外 관계사 대상 업무 프로세스 미러링",
+                            "children": [
+                                { "code": "1", "label": "수주·홍보 콘텐츠 동기화", "full": "수주/홍보 콘텐츠 기획 및 커뮤니케이션 방식 동기화", "projects": [] },
+                                { "code": "2", "label": "고객·시장 분석 방법 동기화", "full": "고객 및 시장 분석 방법 동기화", "projects": [] },
+                                { "code": "3", "label": "브랜드 부여 및 리스크 검토 동기화", "full": "브랜드 부여 및 리스크 검토 동기화", "projects": [] },
+                                { "code": "4", "label": "고객 접점 브랜드 애플리케이션 관리 동기화", "full": "입주, 분양, 사이니지 등 고객 접점 브랜드 어플리케이션 관리 동기화", "isBusiness": true, "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "6", "label": "마켓·소비자 인텔리전스 강화", "full": "360° 마켓 & 소비자 인텔리전스 강화",
+                    "children": [
+                        {
+                            "code": "1", "label": "마켓 인사이트", "full": "마켓 인사이트",
+                            "children": [
+                                { "code": "1", "label": "360° 마켓 & 소비자 인텔리전스 강화", "full": "360° 마켓 & 소비자 인텔리전스 강화", "projects": [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "code": "7", "label": "기타 고유 업무", "full": "고유(기타)",
+                    "children": [
+                        {
+                            "code": "1", "label": "DIC 인사 운영", "children": [
+                                { "code": "1", "label": "DIC실 인사 운영 전반 업무 지원 및 코디네이션", "full": "DIC실 인사 운영 전반 업무 지원 및 코디네이션", "projects": [] }
+                            ]
+                        },
+                        {
+                            "code": "2", "label": "콘텐츠플래닝팀 예산 관리", "children": [
+                                { "code": "1", "label": "콘텐츠플래닝팀 예산 관리", "full": "판관비 및 용역비 관리 및 절감", "projects": [] }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "workUnits": [
+                { "code": "1", "label": "회의", "definition": "내외부 회의, 킥오프, 정기 점검" },
+                { "code": "2", "label": "기획", "definition": "데스크 리서치, 현장 조사, 방향성·전략, 컨셉·콘텐츠 기획" },
+                { "code": "3", "label": "디자인", "definition": "UI/그래픽/템플릿/모션/사운드 등 디자인 개발" },
+                { "code": "4", "label": "제작·감리", "definition": "샘플·인쇄·제작·현장 감리·머터리얼" },
+                { "code": "5", "label": "보고", "definition": "팀장/임원 보고, 품의, 결재" },
+                { "code": "6", "label": "운영", "definition": "운영 지원, 채널 운영, 성과 분석" },
+                { "code": "7", "label": "매뉴얼", "definition": "매뉴얼 수립·개정, 유관부서 대응" },
+                { "code": "8", "label": "QC", "definition": "디자인 템플릿 QC/표준 준수 점검" }
+            ],
+            "sites": []
+        };
+
+        const STORAGE_KEY = 'cp_team_kpi_v6_data_final';
+        const PASSWORD_HASH = "1234"; // 단순 패스워드 예시
+
+        function App() {
+            const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
+            const [password, setPassword] = useState('');
+            const [data, setData] = useState(() => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : INITIAL_DATA;
+            });
+            const [activeTab, setActiveTab] = useState('kpi');
+            const [toast, setToast] = useState(null);
+
+            useEffect(() => {
+                if (isLoggedIn) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }, [data, isLoggedIn]);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (password === PASSWORD_HASH) {
+                    setIsLoggedIn(true);
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                } else {
+                    alert('비밀번호가 틀렸습니다.');
+                }
+            };
+
+            if (!isLoggedIn) {
+                return (
+                    <div className="login-screen">
+                        <form onSubmit={handleLogin} className="glass-card p-12 rounded-[40px] w-full max-w-md flex flex-col items-center gap-8">
+                            <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center shadow-2xl">
+                                <i data-lucide="lock" className="text-white w-10 h-10"></i>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">ACCESS REQUIRED</h2>
+                            <input
+                                type="password" placeholder="PASSWORD"
+                                className="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl text-center font-black tracking-widest focus:border-slate-900 outline-none transition-all"
+                                value={password} onChange={e => setPassword(e.target.value)}
+                            />
+                            <button type="submit" className="w-full btn-fancy p-5 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100">UNLOCK SYSTEM</button>
+                        </form>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen pb-24">
+                    <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+                            <div className="flex items-center gap-5">
+                                <div className="bg-slate-900 p-2.5 rounded-2xl">
+                                    <i data-lucide="layout-grid" className="text-white w-6 h-6"></i>
+                                </div>
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">콘텐츠플래닝팀 KPI</h1>
+                            </div>
+                            <button onClick={() => { sessionStorage.removeItem('isLoggedIn'); setIsLoggedIn(false); }} className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">LOGOUT</button>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-6 mt-12">
+                        <div className="flex items-center justify-between mb-12">
+                            <div className="flex bg-white/50 backdrop-blur-sm rounded-[20px] p-2 shadow-inner border border-slate-100">
+                                {['kpi', 'workUnits', 'sites'].map(tab => (
+                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-btn ${activeTab === tab ? 'active' : ''}`}>
+                                        {tab === 'kpi' ? 'KPI TREE' : tab === 'workUnits' ? '업무 단위' : 'SITE MASTER'}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="px-4 py-1.5 rounded-full bg-slate-200/50 text-slate-500 font-extrabold text-[10px] tracking-widest uppercase">2026.03.12 FINAL</div>
+                        </div>
+
+                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            {activeTab === 'kpi' && <KpiManager tree={data.tree} onUpdate={(tree) => setData({ ...data, tree })} />}
+                            {activeTab === 'workUnits' && <WorkUnitManager units={data.workUnits} onUpdate={(units) => setData({ ...data, workUnits: units })} />}
+                            {activeTab === 'sites' && <SiteManager sites={data.sites} onUpdate={(sites) => setData({ ...data, sites })} />}
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        function KpiManager({ tree, onUpdate }) {
+            const handleAddProject = (i1, i2, i3) => {
+                const name = prompt('세부 프로젝트 명칭 입력:');
+                if (!name) return;
+                const newTree = JSON.parse(JSON.stringify(tree));
+                if (!newTree[i1].children[i2].children[i3].projects) newTree[i1].children[i2].children[i3].projects = [];
+                newTree[i1].children[i2].children[i3].projects.push(name);
+                onUpdate(newTree);
+            };
+
+            return (
+                <div className="space-y-16 pb-32">
+                    {tree.map((l1, i1) => (
+                        <div key={l1.code} className="lv1-container relative" style={{ '--primary': `var(--lv1-${l1.code})` }}>
+                            <div className="flex items-center gap-4 mb-8 pl-6">
+                                <span className="bg-slate-900 text-white px-4 py-1 rounded-lg font-black text-xs uppercase">KPI {l1.code}</span>
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tight">{l1.label}</h2>
+                            </div>
+                            <div className="space-y-10 pl-6">
+                                {l1.children.map((l2, i2) => (
+                                    <div key={l2.code} className="lv2-group rounded-[32px] p-8">
+                                        <div className="flex items-center gap-5 mb-8">
+                                            <div className="bg-slate-900 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl">{l2.code}</div>
+                                            <h3 className="text-xl font-black text-slate-800 tracking-tight">{l2.label}</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6">
+                                            {l2.children.map((l3, i3) => (
+                                                <div key={l3.code} className="flex flex-col gap-3">
+                                                    <div className="lv3-item p-6 rounded-[24px] shadow-sm relative group border-2 border-slate-100 hover:border-slate-800 transition-all">
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <span className="text-[10px] font-black text-slate-200 uppercase">CODE {l2.code}{l3.code}</span>
+                                                            <button onClick={() => handleAddProject(i1, i2, i3)} className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg bg-slate-900 text-white flex items-center justify-center"><i data-lucide="plus" className="w-4 h-4"></i></button>
+                                                        </div>
+                                                        <div className="lv3-label-text">{l3.label}</div>
+                                                        <div className="lv3-full-text line-clamp-2">{l3.full}</div>
+                                                        <div className="lv3-code-overlay" style={{ background: `var(--lv1-${l1.code})` }}>{l1.code}{l2.code}{l3.code}</div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 px-2">
+                                                        {(l3.projects || []).map((p, pIdx) => (
+                                                            <div key={pIdx} className="project-chip"><span>{p}</span></div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function WorkUnitManager({ units, onUpdate }) {
+            const handleUpdateItem = (idx, field, value) => {
+                const newUnits = [...units];
+                newUnits[idx][field] = value;
+                onUpdate(newUnits);
+            };
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {units.map((item, idx) => (
+                        <div key={idx} className="glass-card group hover:border-slate-900 rounded-[32px] p-8 flex flex-col items-center text-center bg-white relative">
+                            <div className="w-16 h-16 rounded-[24px] bg-slate-900 text-white flex items-center justify-center shadow-xl mb-6 font-black text-2xl">{item.code}</div>
+                            <input
+                                className="w-full text-center text-2xl font-black text-slate-900 mb-2 bg-transparent focus:bg-slate-50 border-none outline-none rounded-lg"
+                                value={item.label} onChange={(e) => handleUpdateItem(idx, 'label', e.target.value)}
+                            />
+                            <textarea
+                                className="w-full text-center text-xs text-slate-500 font-bold bg-transparent focus:bg-slate-50 border-none outline-none rounded-lg resize-none h-12"
+                                value={item.definition} onChange={(e) => handleUpdateItem(idx, 'definition', e.target.value)}
+                            />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function SiteManager({ sites, onUpdate }) {
+            const [newSite, setNewSite] = useState({ code: '', name: '' });
+            return (
+                <div className="space-y-8">
+                    <div className="glass-card rounded-[32px] p-8 border-2 border-slate-100 flex gap-4">
+                        <input placeholder="CODE" className="bg-slate-50 p-4 rounded-xl font-bold border-2 border-slate-100 flex-1 outline-none" value={newSite.code} onChange={e => setNewSite({ ...newSite, code: e.target.value })} />
+                        <input placeholder="NAME" className="bg-slate-50 p-4 rounded-xl font-bold border-2 border-slate-100 flex-1 outline-none" value={newSite.name} onChange={e => setNewSite({ ...newSite, name: e.target.value })} />
+                        <button onClick={() => { onUpdate([...sites, newSite]); setNewSite({ code: '', name: '' }); }} className="btn-fancy px-8 rounded-xl font-black">ADD</button>
+                    </div>
+                    <div className="glass-card rounded-[32px] overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 border-b border-slate-100">
+                                <tr><th className="p-6 font-black text-slate-400 text-xs">CODE</th><th className="p-6 font-black text-slate-400 text-xs">SITE NAME</th></tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {sites.map((s, i) => (
+                                    <tr key={i}><td className="p-6 font-black text-slate-400">S{s.code}</td><td className="p-6 font-black text-slate-900 text-lg">{s.name}</td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        setTimeout(() => lucide.createIcons(), 500);
+    </script>
+</body>
+
+</html>
